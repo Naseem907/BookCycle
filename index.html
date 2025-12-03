@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary Title & Meta -->
+    <title>BookCycle | Buy & Sell Used Books</title>
+    <meta name="description" content="BookCycle — Buy & sell new and used books. Discover textbooks, novels, rare finds and more." />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Marked (markdown parser) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fdf8f6',
+                            100: '#f2e8e5',
+                            500: '#e67e22', // Burnt Orange
+                            600: '#d35400',
+                            900: '#2c3e50', // Dark Slate
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .book-card { transition: all 0.3s ease; }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+
+        /* Toast Animation */
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+        .toast-enter { animation: slideIn 0.5s forwards; }
+
+        /* AI Gradient Text */
+        .ai-gradient-text {
+            background: linear-gradient(to right, #e67e22, #d35400, #9b59b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Loading Dots */
+        .typing-indicator span {
+            animation: blink 1.4s infinite both;
+            height: 5px;
+            width: 5px;
+            background-color: #888;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes blink {
+            0% { opacity: 0.1; }
+            20% { opacity: 1; }
+            100% { opacity: 0.1; }
+        }
+
+        /* Animated Background Gradient */
+        .animate-gradient-x {
+            background-size: 400% 400%;
+            animation: gradient-xy 15s ease infinite;
+        }
+        @keyframes gradient-xy {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Video Background Styling */
+        .hero-video-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .hero-video {
+            min-width: 100%;
+            min-height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.4; /* Blends video with the gradient */
+            mix-blend-mode: overlay;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Brand Identity / Logo -->
+                <div class="flex items-center cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <i class="fa-solid fa-book-open text-brand-500 text-2xl mr-2"></i>
+                    <span class="font-serif font-bold text-xl text-gray-900 tracking-tight">BookCycle</span>
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#browse" class="text-gray-600 hover:text-brand-500 font-medium transition">Browse Books</a>
+                    <button onclick="openLibrarianModal()" class="text-gray-600 hover:text-brand-500 font-medium transition flex items-center gap-1 group">
+                        <i class="fa-solid fa-wand-magic-sparkles text-purple-500 group-hover:animate-pulse"></i> AI Librarian
+                    </button>
+                    <a href="#how-it-works" class="text-gray-600 hover:text-brand-500 font-medium transition">How it Works</a>
+                </div>
+
+                <!-- Right Actions / User Tools -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <button onclick="scrollToSell()" class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2 rounded-full font-medium transition shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-plus mr-1"></i> Sell Book
+                    </button>
+                    <div class="relative cursor-pointer group">
+                        <i class="fa-solid fa-cart-shopping text-gray-600 text-xl group-hover:text-brand-500 transition"></i>
+                        <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center transform scale-0 transition-transform duration-200">0</span>
+                    </div>
+                    <button class="text-gray-600 hover:text-brand-500 font-medium">Log In</button>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="flex items-center md:hidden">
+                    <button onclick="toggleMobileMenu()" class="text-gray-600 hover:text-gray-900 focus:outline-none">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Menu (Responsive) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#browse" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-brand-500 hover:bg-gray-50">Browse</a>
+                <button onclick="openLibrarianModal()" class="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-purple-600 hover:bg-purple-50">AI Librarian</button>
+                <button onclick="scrollToSell()" class="w-full text-left block px-3 py-2 rounded-md text-base font-medium text-brand-600 hover:bg-gray-50">Sell a Book</button>
+                <div class="border-t border-gray-100 mt-2 pt-2">
+                    <button class="block w-full text-left px-3 py-2 text-gray-500">Log In</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative bg-brand-900 overflow-hidden h-[600px] flex items-center justify-center">
+        <!-- 1. Animated Colorful Gradient Base -->
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 animate-gradient-x z-0"></div>
+
+        <!-- 2. Video Overlay -->
+        <div class="hero-video-wrapper">
+            <video autoplay muted loop playsinline class="hero-video">
+                <source src="https://assets.mixkit.co/videos/preview/mixkit-curved-pages-of-a-book-2929-large.mp4" type="video/mp4">
+            </video>
+        </div>
+
+        <!-- 3. Darker Overlay for Text Readability -->
+        <div class="absolute inset-0 bg-black/30 z-0"></div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10 text-center">
+            <!-- Glassmorphism Container -->
+            <div class="backdrop-blur-sm bg-white/10 p-8 md:p-12 rounded-2xl border border-white/20 shadow-2xl inline-block max-w-4xl">
+                <h1 class="text-4xl tracking-tight font-serif font-bold text-white sm:text-5xl md:text-6xl mb-6 drop-shadow-lg hero-title">
+                    Give Stories a <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">Colorful New Life</span>
+                </h1>
+                <p class="mt-3 max-w-md mx-auto text-base text-gray-100 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl font-medium drop-shadow-md">
+                    Dive into a universe of books. Buy used gems at unbeatable prices and sell the stories you've already loved.
+                </p>
+                <div class="mt-10 max-w-sm mx-auto sm:max-w-none sm:flex sm:justify-center gap-4">
+                    <a href="#browse" class="w-full flex items-center justify-center px-8 py-3 border-2 border-white text-base font-bold rounded-full text-white hover:bg-white hover:text-purple-600 md:py-4 md:text-lg md:px-10 transition duration-300 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                        Start Exploring
+                    </a>
+                    <button onclick="scrollToSell()" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-full text-white bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 md:py-4 md:text-lg md:px-10 transition duration-300 shadow-lg transform hover:-translate-y-1">
+                        Sell Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container for live updates -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-60"></div>
+
+    <!-- Search & Filters -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-grow relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input type="text" id="searchInput" onkeyup="filterBooks()" class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 sm:text-sm" placeholder="Search by title, author, or ISBN...">
+                </div>
+                <div class="md:w-48">
+                    <select id="categoryFilter" onchange="filterBooks()" class="block w-full py-3 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm">
+                        <option value="all">All Genres</option>
+                        <option value="fiction">Fiction</option>
+                        <option value="science">Science</option>
+                        <option value="history">History</option>
+                        <option value="technology">Technology</option>
+                        <option value="art">Art & Design</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Browse Section / Product Catalog -->
+    <main id="browse" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="flex justify-between items-end mb-8">
+            <h2 class="text-3xl font-serif font-bold text-gray-900">Featured Listings</h2>
+            <a href="#browse" class="text-brand-600 hover:text-brand-700 font-medium flex items-center">
+                View All <i class="fa-solid fa-arrow-right ml-2 text-sm"></i>
+            </a>
+        </div>
+
+        <!-- Inventory Grid System -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8" id="bookGrid">
+
+            <!-- Product Card Component: Book 1 -->
+            <article class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full" data-category="fiction" data-title="The Great Gatsby">
+                <div class="relative h-64 bg-gray-200 overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400"
+                         alt="The Great Gatsby"
+                         class="w-full h-full object-cover transition transform group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full">Good Condition</div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="text-xs text-brand-600 font-semibold uppercase tracking-wide mb-1">Classic Fiction</div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">The Great Gatsby</h3>
+                    <p class="text-sm text-gray-500 mb-4">by F. Scott Fitzgerald</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-xl font-bold text-gray-900">$8.50</span>
+                        <!-- Cart Action Trigger -->
+                        <button onclick="addToCart(this)" class="bg-gray-900 hover:bg-brand-600 text-white p-2 rounded-full transition w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Product Card Component: Book 2 -->
+            <article class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full" data-category="technology" data-title="Clean Code">
+                <div class="relative h-64 bg-gray-200 overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=400"
+                         alt="Clean Code"
+                         class="w-full h-full object-cover transition transform group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full">Like New</div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="text-xs text-brand-600 font-semibold uppercase tracking-wide mb-1">Technology</div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Clean Code</h3>
+                    <p class="text-sm text-gray-500 mb-4">by Robert C. Martin</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-xl font-bold text-gray-900">$24.00</span>
+                        <button onclick="addToCart(this)" class="bg-gray-900 hover:bg-brand-600 text-white p-2 rounded-full transition w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Product Card Component: Book 3 -->
+            <article class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full" data-category="science" data-title="A Brief History of Time">
+                <div class="relative h-64 bg-gray-200 overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400"
+                         alt="A Brief History of Time"
+                         class="w-full h-full object-cover transition transform group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">Fair</div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="text-xs text-brand-600 font-semibold uppercase tracking-wide mb-1">Science</div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">A Brief History of Time</h3>
+                    <p class="text-sm text-gray-500 mb-4">by Stephen Hawking</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-xl font-bold text-gray-900">$6.75</span>
+                        <button onclick="addToCart(this)" class="bg-gray-900 hover:bg-brand-600 text-white p-2 rounded-full transition w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Product Card Component: Book 4 -->
+            <article class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full" data-category="art" data-title="The Story of Art">
+                <div class="relative h-64 bg-gray-200 overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&q=80&w=400"
+                         alt="The Story of Art"
+                         class="w-full h-full object-cover transition transform group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full">Good</div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="text-xs text-brand-600 font-semibold uppercase tracking-wide mb-1">Art & Design</div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">The Story of Art</h3>
+                    <p class="text-sm text-gray-500 mb-4">by E.H. Gombrich</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-xl font-bold text-gray-900">$18.00</span>
+                        <button onclick="addToCart(this)" class="bg-gray-900 hover:bg-brand-600 text-white p-2 rounded-full transition w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Product Card Component: Book 5 -->
+            <article class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full" data-category="history" data-title="Sapiens">
+                <div class="relative h-64 bg-gray-200 overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&q=80&w=400"
+                         alt="Sapiens"
+                         class="w-full h-full object-cover transition transform group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full">Like New</div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="text-xs text-brand-600 font-semibold uppercase tracking-wide mb-1">History</div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Sapiens</h3>
+                    <p class="text-sm text-gray-500 mb-4">by Yuval Noah Harari</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-xl font-bold text-gray-900">$14.50</span>
+                        <button onclick="addToCart(this)" class="bg-gray-900 hover:bg-brand-600 text-white p-2 rounded-full transition w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Product Card Component: Book 6 -->
+            <article class="book-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full" data-category="fiction" data-title="Dune">
+                <div class="relative h-64 bg-gray-200 overflow-hidden group">
+                    <img src="https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=400"
+                         alt="Dune"
+                         class="w-full h-full object-cover transition transform group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">Worn</div>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="text-xs text-brand-600 font-semibold uppercase tracking-wide mb-1">Sci-Fi</div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Dune</h3>
+                    <p class="text-sm text-gray-500 mb-4">by Frank Herbert</p>
+                    <div class="mt-auto flex items-center justify-between">
+                        <span class="text-xl font-bold text-gray-900">$5.00</span>
+                        <button onclick="addToCart(this)" class="bg-gray-900 hover:bg-brand-600 text-white p-2 rounded-full transition w-10 h-10 flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+        </div>
+    </main>
+
+    <!-- User Onboarding / Feature Overview -->
+    <section id="how-it-works" class="bg-white py-16 border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-serif font-bold text-gray-900">How BookCycle Works</h2>
+                <p class="mt-2 text-gray-600">Join our circular economy of readers.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">1. List It</h3>
+                    <p class="text-gray-500">Snap a photo, enter the ISBN, and set your price. It takes less than 2 minutes.</p>
+                </div>
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">2. Ship It</h3>
+                    <p class="text-gray-500">When it sells, use our prepaid shipping label to send the book to its new home.</p>
+                </div>
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">3. Get Paid</h3>
+                    <p class="text-gray-500">Receive payment directly to your bank account or use it as credit to buy more books!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Vendor Listing Form / Sell Section -->
+    <section id="sell-form-section" class="bg-gray-50 py-16 border-t border-gray-200">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-brand-900 py-6 px-8 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white flex items-center">
+                            <i class="fa-solid fa-upload mr-3"></i> Sell Your Book
+                        </h2>
+                        <p class="text-brand-100 mt-1">Fill out the details below to create a listing.</p>
+                    </div>
+                </div>
+
+                <!-- Listing Creation Form -->
+                <form id="sellForm" onsubmit="handleSellSubmit(event)" class="p-8 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="sellTitle" class="block text-sm font-medium text-gray-700 mb-1">Book Title</label>
+                            <input type="text" id="sellTitle" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="e.g. Harry Potter">
+                        </div>
+                        <div>
+                            <label for="sellAuthor" class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                            <input type="text" id="sellAuthor" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="e.g. J.K. Rowling">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="sellISBN" class="block text-sm font-medium text-gray-700 mb-1">ISBN (Optional)</label>
+                            <input type="text" id="sellISBN" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="13-digit code">
+                        </div>
+                        <div>
+                            <label for="sellCondition" class="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                            <select id="sellCondition" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500">
+                                <option>New</option>
+                                <option>Like New</option>
+                                <option selected>Good</option>
+                                <option>Fair</option>
+                                <option>Poor</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Your Price ($)</label>
+                        <div class="relative rounded-md shadow-sm w-1/3">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">$</span>
+                            </div>
+                            <input type="number" step="0.01" required class="focus:ring-brand-500 focus:border-brand-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md py-2" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="sellDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                            <!-- AI Content Generation Trigger -->
+                            <button type="button" onclick="generateDescription()" id="aiGenerateBtn" class="text-xs text-purple-600 hover:text-purple-800 font-bold flex items-center px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition border border-purple-200">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> ✨ AI Write for Me
+                            </button>
+                        </div>
+                        <textarea id="sellDescription" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-500 focus:border-brand-500" placeholder="Mention any damage or specific details..."></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-brand-600 text-white py-3 px-4 rounded-md font-bold hover:bg-brand-700 transition shadow-lg">
+                        List Book for Sale
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-brand-900 text-white pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+                <div class="col-span-1 md:col-span-1">
+                    <div class="flex items-center mb-4">
+                        <i class="fa-solid fa-book-open text-brand-500 text-2xl mr-2"></i>
+                        <span class="font-serif font-bold text-xl tracking-tight">BookCycle</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">
+                        Connecting book lovers everywhere. Buy cheap, sell smart, and read more.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Shop</h3>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="#" class="hover:text-white transition">Fiction</a></li>
+                        <li><a href="#" class="hover:text-white transition">Non-Fiction</a></li>
+                        <li><a href="#" class="hover:text-white transition">Textbooks</a></li>
+                        <li><a href="#" class="hover:text-white transition">Rare Finds</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Support</h3>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="#" class="hover:text-white transition">Shipping Rates</a></li>
+                        <li><a href="#" class="hover:text-white transition">Return Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition">Help Center</a></li>
+                        <li><a href="#" class="hover:text-white transition">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Stay Connected</h3>
+                    <div class="flex space-x-4 mb-4">
+                        <a href="#" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center hover:bg-brand-500 transition"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center hover:bg-brand-500 transition"><i class="fa-brands fa-twitter"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center hover:bg-brand-500 transition"><i class="fa-brands fa-instagram"></i></a>
+                    </div>
+                    <p class="text-xs text-gray-500">Subscribe for weekly book deals.</p>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
+                &copy; 2023 BookCycle Inc. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- AI Librarian / Chatbot Modal Interface -->
+    <div id="librarianModal" class="fixed inset-0 z-[60] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeLibrarianModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                <!-- Chat Header -->
+                <div class="bg-brand-900 px-4 py-3 flex justify-between items-center">
+                    <h3 class="text-lg leading-6 font-bold text-white flex items-center">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-2 text-purple-400"></i> AI Librarian
+                    </h3>
+                    <button onclick="closeLibrarianModal()" class="text-gray-300 hover:text-white focus:outline-none">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                </div>
+                <!-- Message History Container -->
+                <div class="bg-gray-50 px-4 py-4 h-96 overflow-y-auto flex flex-col gap-3" id="chatHistory">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 bg-purple-100 rounded-full p-2">
+                            <i class="fa-solid fa-robot text-purple-600"></i>
+                        </div>
+                        <div class="ml-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+                            Hello! I'm your AI Librarian. Tell me what kind of books you enjoy, or what you're looking for, and I'll suggest some great reads available in our marketplace!
+                        </div>
+                    </div>
+                </div>
+                <!-- Chat Input Area -->
+                <div class="bg-white px-4 py-3 border-t border-gray-200">
+                    <div class="flex gap-2">
+                        <input type="text" id="librarianInput" class="flex-1 focus:ring-brand-500 focus:border-brand-500 block w-full rounded-md sm:text-sm border-gray-300 p-2 border" placeholder="e.g. I like murder mysteries set in the 1920s...">
+                        <button onclick="handleLibrarianQuery()" id="askBtn" class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-base font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 sm:text-sm">
+                            Ask
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // === Gemini API Setup ===
+        const apiKey = ""; // System populates this
+        
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            const maxRetries = 3;
+            let retryCount = 0;
+            let delay = 1000;
+
+            while (retryCount <= maxRetries) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    
+                    const data = await response.json();
+                    return data.candidates[0].content.parts[0].text;
+
+                } catch (error) {
+                    retryCount++;
+                    if (retryCount > maxRetries) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // Accessibility helpers
+        const modal = document.getElementById('librarianModal');
+        let lastFocusedElement = null;
+
+        function openLibrarianModal() {
+            lastFocusedElement = document.activeElement;
+            modal.classList.remove('hidden');
+            document.getElementById('librarianInput').focus();
+        }
+
+        function closeLibrarianModal() {
+            modal.classList.add('hidden');
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function scrollToSell() {
+            document.getElementById('sell-form-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        let cartCount = 0;
+        function addToCart(btn) {
+            cartCount++;
+            const counterEl = document.getElementById('cart-count');
+            counterEl.innerText = cartCount;
+            counterEl.classList.remove('scale-0');
+
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btn.classList.add('bg-green-500', 'hover:bg-green-600');
+
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            }, 2000);
+
+            showToast("Added to your cart!");
+        }
+
+        function filterBooks() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const categoryInput = document.getElementById('categoryFilter').value.toLowerCase();
+            const books = document.querySelectorAll('.book-card');
+
+            books.forEach(book => {
+                const title = book.getAttribute('data-title').toLowerCase();
+                const category = book.getAttribute('data-category').toLowerCase();
+
+                const matchesSearch = title.includes(searchInput);
+                const matchesCategory = categoryInput === 'all' || category === categoryInput;
+
+                if (matchesSearch && matchesCategory) {
+                    book.classList.remove('hidden');
+                } else {
+                    book.classList.add('hidden');
+                }
+            });
+        }
+
+        function handleSellSubmit(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Listing Book...";
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            setTimeout(() => {
+                showToast("Success! Your book is now listed.");
+                e.target.reset();
+                btn.innerText = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 1500);
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-gray-900 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 toast-enter min-w-[300px] border-l-4 border-brand-500';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-brand-500 text-xl"></i><span class="font-medium">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(100%)';
+                toast.style.transition = 'all 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
+        // === Feature 1: AI Description Generator ===
+        async function generateDescription() {
+            const title = document.getElementById('sellTitle').value;
+            const author = document.getElementById('sellAuthor').value;
+            const condition = document.getElementById('sellCondition').value;
+            const descField = document.getElementById('sellDescription');
+            const btn = document.getElementById('aiGenerateBtn');
+
+            if (!title || !author) {
+                showToast("Please enter Title and Author first!");
+                return;
+            }
+
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+            btn.disabled = true;
+
+            const prompt = `Write a short, engaging, 2-sentence sales description for a used book titled "${title}" by "${author}" which is in "${condition}" condition. Focus on why a reader would love this book. Do not use quotes.`;
+
+            try {
+                const description = await callGemini(prompt);
+                descField.value = description;
+                showToast("✨ Description generated!");
+            } catch (error) {
+                console.error(error);
+                showToast("Failed to generate description. Try again.");
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
+        // === Feature 2: AI Librarian Logic ===
+        const chatHistory = document.getElementById('chatHistory');
+
+        function appendMessage(text, isUser = false) {
+            const div = document.createElement('div');
+            div.className = 'flex items-start ' + (isUser ? 'justify-end' : '');
+            
+            const avatar = isUser ? 
+                `<div class="flex-shrink-0 bg-brand-100 rounded-full p-2 ml-3"><i class="fa-solid fa-user text-brand-600"></i></div>` :
+                `<div class="flex-shrink-0 bg-purple-100 rounded-full p-2 mr-3"><i class="fa-solid fa-robot text-purple-600"></i></div>`;
+            
+            const bubble = `<div class="${isUser ? 'bg-brand-500 text-white' : 'bg-white border border-gray-100 text-gray-700'} p-3 rounded-lg shadow-sm text-sm max-w-[80%] markdown-body">${isUser ? text : marked.parse(text)}</div>`;
+
+            div.innerHTML = isUser ? bubble + avatar : avatar + bubble;
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        async function handleLibrarianQuery() {
+            const input = document.getElementById('librarianInput');
+            const query = input.value.trim();
+            const btn = document.getElementById('askBtn');
+            
+            if (!query) return;
+
+            // User Message
+            appendMessage(query, true);
+            input.value = '';
+            
+            // Loading State
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'flex items-start';
+            loadingDiv.innerHTML = `<div class="flex-shrink-0 bg-purple-100 rounded-full p-2 mr-3"><i class="fa-solid fa-robot text-purple-600"></i></div><div class="bg-white p-3 rounded-lg shadow-sm border border-gray-100"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+            chatHistory.appendChild(loadingDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            btn.disabled = true;
+
+            const prompt = `You are a helpful, enthusiastic bookstore librarian AI. The user says: "${query}". Recommend 3 specific books that fit this request. For each book, provide the title in bold and a very brief reason why. Keep the tone friendly and encouraging. Format the output as markdown list.`;
+
+            try {
+                const response = await callGemini(prompt);
+                loadingDiv.remove();
+                appendMessage(response, false);
+            } catch (error) {
+                loadingDiv.remove();
+                appendMessage("I'm having trouble connecting to the library archives right now. Please try again!", false);
+            } finally {
+                btn.disabled = false;
+                input.focus();
+            }
+        }
+        
+        document.getElementById('librarianInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleLibrarianQuery();
+        });
+    </script>
+</body>
+</html>
