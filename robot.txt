@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /admin/
+Disallow: /private/
+
+Allow: /_next/static/
+Allow: /images/
+Allow: /assets/
+
+Sitemap: [https://book-cycle-tau.vercel.app/sitemap.xml](https://book-cycle-tau.vercel.app/sitemap.xml)
+
